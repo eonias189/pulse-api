@@ -1,6 +1,7 @@
-package main
+package server
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 )
@@ -17,6 +18,13 @@ func NewServer(address string, logger *slog.Logger) *Server {
 	}
 }
 
+func (s *Server) LogMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		s.logger.Info(fmt.Sprintf("%v %v", r.Method, r.URL.String()))
+		next.ServeHTTP(w, r)
+	})
+}
+
 func (s *Server) Start() error {
 	mux := http.NewServeMux()
 
@@ -24,7 +32,7 @@ func (s *Server) Start() error {
 
 	s.logger.Info("server has been started", "address", s.address)
 
-	err := http.ListenAndServe(s.address, mux)
+	err := http.ListenAndServe(s.address, s.LogMiddleware(mux))
 	if err != http.ErrServerClosed {
 		return err
 	}

@@ -16,7 +16,7 @@ RUN go mod download && go mod verify
 COPY . .
 
 # Build the application.
-RUN go build -o bin/application .
+RUN go build -o bin/application ./cmd
 
 # Prepare executor image.
 FROM alpine:3.19 AS runner
@@ -26,9 +26,8 @@ RUN apk update && apk add ca-certificates libc6-compat openssh bash && rm -rf /v
 WORKDIR /opt
 
 COPY --from=builder /opt/bin/application ./
-
-# Add required static files.
-#COPY assets assets
+ENV POSTGRES_CONN=lalala
+ENV SERVER_ADDRESS=0.0.0.0:8080
 
 # Run the application.
 CMD ["./application"]
