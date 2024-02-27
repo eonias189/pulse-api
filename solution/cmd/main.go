@@ -3,6 +3,7 @@ package main
 import (
 	"log/slog"
 	"os"
+	"solution/internal/db"
 	"solution/internal/env"
 	"solution/internal/server"
 )
@@ -15,7 +16,6 @@ func main() {
 		logger.Error("missed POSTGRES_CONN env")
 		os.Exit(1)
 	}
-	logger.Info(pgUrl)
 
 	serverAddress, err := env.GetServerAddress()
 	if err != nil {
@@ -23,7 +23,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	s := server.NewServer(serverAddress, logger)
+	dataBase := db.NewDB(pgUrl)
+	err = dataBase.Connect()
+	if err != nil {
+		logger.Error("unable to connect to database")
+		os.Exit(1)
+	}
+	logger.Info("successfully connected")
+
+	s := server.NewServer(serverAddress, dataBase, logger)
 	if err = s.Start(); err != nil {
 		logger.Error("server has been stopped", "error", err)
 	}

@@ -26,8 +26,6 @@ RUN apk update && apk add ca-certificates libc6-compat openssh bash && rm -rf /v
 WORKDIR /opt
 
 COPY --from=builder /opt/bin/application ./
-ENV POSTGRES_CONN=lalala
-ENV SERVER_ADDRESS=0.0.0.0:8080
 
 # Run the application.
 CMD ["./application"]
