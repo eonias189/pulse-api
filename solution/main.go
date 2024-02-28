@@ -29,4 +29,5 @@ func main() {
 	if err = s.Start(); err != nil {
 		logger.Error("server has been stopped", "error", err)
 	}
+
 }
