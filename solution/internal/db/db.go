@@ -1,10 +1,11 @@
 package db
 
 import (
-	"database/sql"
+	"context"
 	"fmt"
 
-	_ "github.com/lib/pq"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Country struct {
@@ -15,14 +16,14 @@ type Country struct {
 	Region string `json:"region"`
 }
 
-func scanCountry(row *sql.Rows) (Country, error) {
+func scanCountry(row pgx.Rows) (Country, error) {
 	c := Country{}
 	err := row.Scan(&c.Id, &c.Name, &c.Alpha2, &c.Alpha3, &c.Region)
 	return c, err
 }
 
 type DB struct {
-	db    *sql.DB
+	pool  *pgxpool.Pool
 	pgUrl string
 }
 
@@ -31,30 +32,30 @@ func NewDB(pgUrl string) *DB {
 }
 
 func (d *DB) Connect() error {
-	pg, err := sql.Open("postgres", d.pgUrl)
+	pool, err := pgxpool.New(context.Background(), d.pgUrl)
 	if err != nil {
 		return err
 	}
-	err = pg.Ping()
+	err = pool.Ping(context.Background())
 	if err != nil {
 		return err
 	}
-	d.db = pg
+	d.pool = pool
 	return nil
 
 }
 
 func (d *DB) GetCountries() ([]Country, error) {
-	return getAll[Country](d.db, `SELECT * FROM countries`, scanCountry)
+	return getAll[Country](d.pool, `SELECT * FROM countries`, scanCountry)
 }
 
 func (d *DB) GetCountriesOfRegion(region string) ([]Country, error) {
-	return getAll[Country](d.db, fmt.Sprintf(`SELECT * FROM countries WHERE region='%v'`, region), scanCountry)
+	return getAll[Country](d.pool, fmt.Sprintf(`SELECT * FROM countries WHERE region='%v'`, region), scanCountry)
 }
 
-func getAll[T any](db *sql.DB, query string, scan func(*sql.Rows) (T, error)) ([]T, error) {
+func getAll[T any](pool *pgxpool.Pool, query string, scan func(pgx.Rows) (T, error)) ([]T, error) {
 	res := []T{}
-	rows, err := db.Query(query)
+	rows, err := pool.Query(context.Background(), query)
 	if err != nil {
 		return res, err
 	}
