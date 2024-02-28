@@ -1,11 +1,16 @@
 version: "3"
 
 services:
-  web:
-    build: .
+  app:
+    image: app-dev
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
     environment:
       - SERVER_ADDRESS=0.0.0.0:8080
       - POSTGRES_CONN=postgres://user:password@db:5432/prod_proj_db
+    volumes:
+      - .:/app
     ports:
       - 8080:8080
     depends_on:
