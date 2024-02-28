@@ -27,5 +27,7 @@ WORKDIR /opt
 
 COPY --from=builder /opt/bin/application ./
 
+EXPOSE 8080
+
 # Run the application.
 CMD ["./application"]

@@ -24,9 +24,10 @@ func main() {
 	}
 
 	dataBase := db.NewDB(pgUrl)
+	logger.Info("start connecting")
 	err = dataBase.Connect()
 	if err != nil {
-		logger.Error("unable to connect to database")
+		logger.Error("unable to connect to database: " + err.Error())
 		os.Exit(1)
 	}
 	logger.Info("successfully connected")

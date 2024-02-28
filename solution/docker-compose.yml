@@ -5,7 +5,7 @@ services:
     build: .
     environment:
       - SERVER_ADDRESS=0.0.0.0:8080
-      - POSTGRES_CONN=user=user password=password host=db port=5432 dbname=prod_proj_db sslmode=disable
+      - POSTGRES_CONN=postgres://user:password@db:5432/prod_proj_db?sslmode=disable
     ports:
       - 8080:8080
     depends_on:
@@ -21,6 +21,7 @@ services:
       - POSTGRES_PASSWORD=password
       - POSTGRES_USER=user
       - POSTGRES_DB=prod_proj_db
+      - POSTGRES_HOST=localhost
       - PGDATA=/var/lib/postgresql/data/pgdata
     ports:
       - 5432:5432
@@ -28,5 +29,7 @@ services:
   adminer:
     image: adminer
     restart: always
+    depends_on:
+      - db
     ports:
       - 8081:8080

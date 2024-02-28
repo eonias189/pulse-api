@@ -3,7 +3,6 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -36,14 +35,10 @@ func (d *DB) Connect() error {
 	if err != nil {
 		return err
 	}
-	for {
-		err = pg.Ping()
-		if err == nil {
-			break
-		}
-		time.Sleep(time.Second * 5)
+	err = pg.Ping()
+	if err != nil {
+		return err
 	}
-
 	d.db = pg
 	return nil
 
