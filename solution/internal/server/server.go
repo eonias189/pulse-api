@@ -1,75 +1,46 @@
 package server
 
 import (
-	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
-	"solution/internal/db"
+	serv "solution/internal/service"
+
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/logger"
+	"github.com/gofiber/fiber/v3/middleware/recover"
 )
 
 type Server struct {
-	address string
-	db      *db.DB
+	service *serv.Service
 	logger  *slog.Logger
 }
 
-func NewServer(address string, db *db.DB, logger *slog.Logger) *Server {
+func NewServer(service *serv.Service, logger *slog.Logger) *Server {
 	return &Server{
-		address: address,
 		logger:  logger,
-		db:      db,
+		service: service,
 	}
 }
 
-func (s *Server) LogMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		s.logger.Info(fmt.Sprintf("%v %v", r.Method, r.URL.String()))
-		next.ServeHTTP(w, r)
-	})
-}
+func (s *Server) Run(address string) error {
+	app := fiber.New()
+	app.Use(logger.New())
+	app.Use(recover.New())
 
-func SendError(w http.ResponseWriter, err error) {
-	w.WriteHeader(http.StatusInternalServerError)
-	fmt.Fprint(w, err.Error())
-}
+	api := app.Group("/api")
 
-func (s *Server) handleCountries(w http.ResponseWriter, r *http.Request) {
-	region := r.URL.Query().Get("region")
-	var (
-		countries []db.Country
-		err       error
-	)
-	if region == "" {
-		countries, err = s.db.GetCountries()
-	} else {
-		countries, err = s.db.GetCountriesOfRegion(region)
-	}
-	if err != nil {
-		SendError(w, err)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	data, _ := json.Marshal(countries)
-	fmt.Fprint(w, string(data))
-}
+	api.Get("/ping", s.handlePing)
 
-func (s *Server) Start() error {
-	mux := http.NewServeMux()
+	countries := api.Group("/countries")
+	countries.Get("/", s.handleCountriesIndex)
+	countries.Get("/:alpha2", s.handleCountriesAlpha2)
 
-	mux.HandleFunc("/api/ping", s.handlePing)
-	mux.HandleFunc("/api/countries", s.handleCountries)
+	s.logger.Info("server has been started", "address", address)
 
-	s.logger.Info("server has been started", "address", s.address)
-
-	err := http.ListenAndServe(s.address, s.LogMiddleware(mux))
+	err := app.Listen(address)
 	if err != http.ErrServerClosed {
 		return err
 	}
 
 	return nil
-}
-
-func (s *Server) handlePing(w http.ResponseWriter, r *http.Request) {
-	_, _ = w.Write([]byte("ok"))
 }
