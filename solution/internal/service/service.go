@@ -78,6 +78,16 @@ func (s *Service) UserExists(user contract.User) bool {
 	return len(users) > 0
 }
 
+func (s *Service) PhoneExists(user contract.User) bool {
+	query := fmt.Sprintf(`SELECT * FROM users WHERE phone='%v' AND login !='%v'`, user.Phone, user.Login)
+	users, _ := QueryAll(UserDriver{}, s.pool, query)
+	return len(users) > 1
+}
+
 func (s *Service) AddUser(user contract.User) error {
 	return Insert(UserDriver{}, s.pool, user)
+}
+
+func (s *Service) UpdateUser(old, newUser contract.User) error {
+	return Update(UserDriver{}, s.pool, old, newUser)
 }

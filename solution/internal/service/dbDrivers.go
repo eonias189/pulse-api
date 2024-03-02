@@ -19,6 +19,10 @@ type Adder[T any] interface {
 	Add(T) string
 }
 
+type Updater[T any] interface {
+	Update(T, T) string
+}
+
 type CountryDriver struct {
 }
 
@@ -70,7 +74,9 @@ type UserDriver struct{}
 
 func (u UserDriver) Scan(row pgx.Row) (contract.User, error) {
 	user := contract.User{}
-	err := row.Scan(&user.Id, &user.Login, &user.Email, &user.Password, &user.CountryCode, &user.IsPublic, &user.Phone, &user.Image)
+	err := row.Scan(&user.Id, &user.Login, &user.Email,
+		&user.Password, &user.CountryCode, &user.IsPublic,
+		&user.Phone, &user.Image, &user.PasswordChanged)
 	return user, err
 }
 
@@ -83,14 +89,20 @@ func (u UserDriver) InitTable() string {
 		countryCode CHAR(2) NOT NULL,
 		isPublic BOOL NOT NULL,
 		phone TEXT UNIQUE,
-		image TEXT
+		image TEXT,
+		passwordChanged INTEGER
 	);`
 }
 
 func (u UserDriver) Add(user contract.User) string {
-	q := fmt.Sprintf(`INSERT INTO users VALUES ('%v', '%v', '%v', '%v', '%v', %v, '%v', '%v')`,
+	q := fmt.Sprintf(`INSERT INTO users VALUES ('%v', '%v', '%v', '%v', '%v', %v, '%v', '%v', %v)`,
 		user.Id, user.Login, user.Email, user.Password, user.CountryCode,
-		user.IsPublic, user.Phone, user.Image,
+		user.IsPublic, user.Phone, user.Image, user.PasswordChanged,
 	)
 	return q
+}
+
+func (u UserDriver) Update(old, newUser contract.User) string {
+	return fmt.Sprintf(`UPDATE users SET countryCode='%v', isPublic=%v, phone='%v', image='%v' WHERE login='%v'`,
+		newUser.CountryCode, newUser.IsPublic, newUser.Phone, newUser.Image, old.Login)
 }

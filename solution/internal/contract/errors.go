@@ -8,7 +8,7 @@ var (
 	INVALID_PASSWORD    = fmt.Errorf("invalid password")
 	USER_ALREADY_EXISTS = fmt.Errorf("user with some of this data already exists")
 	BAD_CRENDIALS       = fmt.Errorf("bad crendials")
-	DB_NOT_FOUND        = fmt.Errorf("not found in db")
+	PASSWORD_CHANGED    = fmt.Errorf("password changed")
 )
 
 func ENV_ERROR(param string) error {
@@ -33,4 +33,8 @@ func BAD_BODY_PARAM(msg string) error {
 
 func UNKNOWN_COUNTRY_CODE(code string) error {
 	return fmt.Errorf("unknown country code: %v", code)
+}
+
+func NOT_FOUND(what, which string) error {
+	return fmt.Errorf("%v not found: %v", what, which)
 }

@@ -43,12 +43,7 @@ func (s *Server) Run(address string) error {
 	api.Get("/ping", handlePing)
 	handleCountries(api.Group("/countries"), s.service)
 	handleAuth(api.Group("/auth"), s.service)
-
-	r := app.Group("/nr")
-	r.Use(AuthRequired())
-	r.Get("/", func(c *fiber.Ctx) error {
-		return c.SendString("access")
-	})
+	handleMe(api.Group("/me"), s.service)
 
 	s.logger.Info("server has been started", "address", address)
 

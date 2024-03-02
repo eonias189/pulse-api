@@ -9,13 +9,12 @@ import (
 	jwtware "github.com/gofiber/contrib/jwt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
-	"golang.org/x/crypto/bcrypt"
 )
 
 var (
 	secretKey    = []byte("very very secret")
 	contextKey   = "user"
-	tokenTimeout = time.Second * 30
+	tokenTimeout = time.Hour * 4
 	jwtCfg       = jwtware.Config{
 		TokenLookup: "header:Authorization",
 		AuthScheme:  "Bearer",
@@ -24,17 +23,64 @@ var (
 			JWTAlg: jwtware.HS256,
 		},
 		ContextKey: contextKey,
-		ErrorHandler: func(c *fiber.Ctx, err error) error {
-			return sendError(c, err, fiber.StatusUnauthorized)
-		},
 	}
 )
 
-func AuthRequired() func(*fiber.Ctx) error {
-	return jwtware.New(jwtCfg)
+func AuthRequired(s *service.Service) func(*fiber.Ctx) error {
+	newCfg := jwtCfg
+	newCfg.ErrorHandler = func(c *fiber.Ctx, err error) error {
+		return sendError(c, err, fiber.StatusUnauthorized)
+	}
+	newCfg.SuccessHandler = func(c *fiber.Ctx) error {
+
+		payload, err := GetJWTPayload(c)
+		if err != nil {
+			return sendError(c, err, fiber.StatusUnauthorized)
+		}
+
+		if time.Now().Unix() > payload.CreateTime+int64(tokenTimeout.Seconds()) {
+			return sendError(c, jwt.ErrTokenExpired, fiber.StatusUnauthorized)
+		}
+
+		user, err := s.GetUserByLogin(payload.Login)
+		if err != nil {
+			return sendError(c, err, fiber.StatusInternalServerError)
+		}
+
+		if user.PasswordChanged > payload.CreateTime {
+			return sendError(c, contract.PASSWORD_CHANGED, fiber.StatusUnauthorized)
+		}
+
+		return c.Next()
+	}
+	return jwtware.New(newCfg)
 }
 
-// func GetJWTPayload(c *fiber.Ctx) (contract.JWTPayload, error)
+func GetJWTPayload(c *fiber.Ctx) (contract.JWTPayload, error) {
+	payload := contract.JWTPayload{}
+	jwtToken, ok := c.Context().Value(contextKey).(*jwt.Token)
+	if !ok {
+		return payload, jwt.ErrTokenMalformed
+	}
+
+	claimMap, ok := jwtToken.Claims.(jwt.MapClaims)
+	if !ok {
+		return payload, jwt.ErrTokenMalformed
+	}
+
+	payload.Login, ok = claimMap["login"].(string)
+	if !ok {
+		return payload, jwt.ErrTokenInvalidClaims
+	}
+
+	timeout, ok := claimMap["createTime"].(float64)
+	if !ok {
+		return payload, jwt.ErrTokenInvalidClaims
+	}
+
+	payload.CreateTime = int64(timeout)
+	return payload, nil
+}
 
 func validatePassword(password string) error {
 	if len(password) < 6 {
@@ -121,12 +167,13 @@ func handleAuth(r fiber.Router, s *service.Service) {
 		}
 
 		user.Id = contract.GenerateUUID()
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+		hashedPassword, err := user.HashPassword()
 		if err != nil {
 			return sendError(c, err, fiber.StatusInternalServerError)
 		}
 
 		user.Password = string(hashedPassword)
+		user.PasswordChanged = time.Now().Unix()
 		err = s.AddUser(user)
 		if err != nil {
 			return sendError(c, err, fiber.StatusInternalServerError)
@@ -154,11 +201,14 @@ func handleAuth(r fiber.Router, s *service.Service) {
 			return sendError(c, contract.BAD_CRENDIALS, fiber.StatusUnauthorized)
 		}
 
-		if err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(body.Password)); err != nil {
+		if err = user.CheckPassword(body.Password); err != nil {
 			return sendError(c, contract.BAD_CRENDIALS, fiber.StatusUnauthorized)
 		}
 
-		token, err := generateJWT(contract.JWTPayload{Login: user.Login, Timeout: int(time.Now().Add(tokenTimeout).Unix())})
+		token, err := generateJWT(contract.JWTPayload{
+			Login:      user.Login,
+			CreateTime: time.Now().Add(tokenTimeout).Unix(),
+		})
 		if err != nil {
 			return sendError(c, contract.BAD_CRENDIALS, fiber.StatusInternalServerError)
 		}

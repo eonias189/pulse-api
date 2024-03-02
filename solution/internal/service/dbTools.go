@@ -39,3 +39,8 @@ func Insert[T any, A Adder[T]](adder A, pool *pgxpool.Pool, item T) error {
 	_, err := pool.Exec(context.Background(), adder.Add(item))
 	return err
 }
+
+func Update[T any, U Updater[T]](updater U, pool *pgxpool.Pool, old T, newItem T) error {
+	_, err := pool.Exec(context.Background(), updater.Update(old, newItem))
+	return err
+}
