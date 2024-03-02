@@ -10,7 +10,9 @@ func NewErrorResp(err error) ErrorResp {
 
 type CountryResponse []Country
 
-type RegisterResp UserProfile
+type RegisterResp struct {
+	Profile UserProfile `json:"profile"`
+}
 
 type SignInResp struct {
 	Token string `json:"token"`

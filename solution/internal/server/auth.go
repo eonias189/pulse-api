@@ -132,7 +132,7 @@ func handleAuth(r fiber.Router, s *service.Service) {
 			return sendError(c, err, fiber.StatusInternalServerError)
 		}
 
-		return c.Status(fiber.StatusCreated).JSON(user.ToUserProfile())
+		return c.Status(fiber.StatusCreated).JSON(contract.RegisterResp{Profile: user.ToUserProfile()})
 
 	})
 
