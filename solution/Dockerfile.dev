@@ -41,4 +41,4 @@ COPY . .
 RUN go get github.com/githubnemo/CompileDaemon
 RUN go install github.com/githubnemo/CompileDaemon
 RUN go mod download
-ENTRYPOINT CompileDaemon -build="go build -o /build/app" -command="/build/app"
+ENTRYPOINT CompileDaemon -log-prefix=false -build="go build -o /build/app" -command="/build/app"

@@ -39,7 +39,15 @@ func (s *Service) connect() error {
 
 func (s *Service) initTables() error {
 	err := InitTable(CountryDriver{}, s.pool)
-	return err
+	if err != nil {
+		return err
+	}
+
+	err = InitTable(UserDriver{}, s.pool)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *Service) GetCountries() ([]contract.Country, error) {
@@ -57,4 +65,19 @@ func (s *Service) GetRegions() ([]string, error) {
 func (s *Service) GetCountryByAlpha2(alpha2 string) (contract.Country, error) {
 	query := fmt.Sprintf(`SELECT * FROM countries WHERE alpha2='%v'`, alpha2)
 	return QuerySingle(CountryDriver{}, s.pool, query)
+}
+
+func (s *Service) GetUserByLogin(login string) (contract.User, error) {
+	query := fmt.Sprintf(`SELECT * FROM users WHERE login='%v'`, login)
+	return QuerySingle(UserDriver{}, s.pool, query)
+}
+
+func (s *Service) UserExists(user contract.User) bool {
+	query := fmt.Sprintf(`SELECT * FROM users WHERE login='%v' OR email='%v' OR phone='%v'`, user.Login, user.Email, user.Phone)
+	users, _ := QueryAll(UserDriver{}, s.pool, query)
+	return len(users) > 0
+}
+
+func (s *Service) AddUser(user contract.User) error {
+	return Insert(UserDriver{}, s.pool, user)
 }

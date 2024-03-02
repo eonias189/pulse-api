@@ -3,11 +3,14 @@ package server
 import (
 	"log/slog"
 	"net/http"
+	"solution/internal/contract"
 	serv "solution/internal/service"
 
-	"github.com/gofiber/fiber/v3"
-	"github.com/gofiber/fiber/v3/middleware/logger"
-	"github.com/gofiber/fiber/v3/middleware/recover"
+	"github.com/gofiber/contrib/swagger"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 )
 
 type Server struct {
@@ -22,18 +25,37 @@ func NewServer(service *serv.Service, logger *slog.Logger) *Server {
 	}
 }
 
+func sendError(c *fiber.Ctx, err error, status int) error {
+	return c.Status(status).JSON(contract.NewErrorResp(err))
+}
+
+func handlePing(c *fiber.Ctx) error {
+	return c.SendString("ok")
+}
+
 func (s *Server) Run(address string) error {
 	app := fiber.New()
 	app.Use(logger.New())
-	app.Use(recover.New())
+	app.Use(recover.New(recover.Config{}))
+	app.Use(cors.New(cors.Config{}))
+	app.Use(swagger.New(swagger.Config{
+		BasePath: "/api",
+		FilePath: "./docs/openapi.yml",
+		Path:     "swagger",
+		Title:    "Swagger API Docs",
+	}))
 
 	api := app.Group("/api")
 
-	api.Get("/ping", s.handlePing)
+	api.Get("/ping", handlePing)
+	handleCountries(api.Group("/countries"), s.service)
+	handleAuth(api.Group("/auth"), s.service)
 
-	countries := api.Group("/countries")
-	countries.Get("/", s.handleCountriesIndex)
-	countries.Get("/:alpha2", s.handleCountriesAlpha2)
+	r := app.Group("/nr")
+	r.Use(AuthRequired())
+	r.Get("/", func(c *fiber.Ctx) error {
+		return c.SendString("access")
+	})
 
 	s.logger.Info("server has been started", "address", address)
 

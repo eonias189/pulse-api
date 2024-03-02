@@ -34,3 +34,8 @@ func InitTable[D TableCreater](driver D, pool *pgxpool.Pool) error {
 	_, err := pool.Exec(context.Background(), driver.InitTable())
 	return err
 }
+
+func Insert[T any, A Adder[T]](adder A, pool *pgxpool.Pool, item T) error {
+	_, err := pool.Exec(context.Background(), adder.Add(item))
+	return err
+}
