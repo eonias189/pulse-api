@@ -6,7 +6,6 @@ import (
 	"solution/internal/contract"
 	serv "solution/internal/service"
 
-	"github.com/gofiber/contrib/swagger"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -38,12 +37,6 @@ func (s *Server) Run(address string) error {
 	app.Use(logger.New())
 	app.Use(recover.New(recover.Config{}))
 	app.Use(cors.New(cors.Config{}))
-	app.Use(swagger.New(swagger.Config{
-		BasePath: "/api",
-		FilePath: "./docs/openapi.yml",
-		Path:     "swagger",
-		Title:    "Swagger API Docs",
-	}))
 
 	api := app.Group("/api")
 
