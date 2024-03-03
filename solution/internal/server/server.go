@@ -3,7 +3,6 @@ package server
 import (
 	"log/slog"
 	"net/http"
-	"solution/internal/contract"
 	serv "solution/internal/service"
 
 	"github.com/gofiber/fiber/v2"
@@ -24,10 +23,6 @@ func NewServer(service *serv.Service, logger *slog.Logger) *Server {
 	}
 }
 
-func sendError(c *fiber.Ctx, err error, status int) error {
-	return c.Status(status).JSON(contract.NewErrorResp(err))
-}
-
 func handlePing(c *fiber.Ctx) error {
 	return c.SendString("ok")
 }
@@ -44,6 +39,7 @@ func (s *Server) Run(address string) error {
 	handleCountries(api.Group("/countries"), s.service)
 	handleAuth(api.Group("/auth"), s.service)
 	handleMe(api.Group("/me"), s.service)
+	handleProfiles(api.Group("/profiles"), s.service)
 
 	s.logger.Info("server has been started", "address", address)
 

@@ -17,7 +17,6 @@ type Country struct {
 }
 
 type User struct {
-	Id              string `json:"-"`
 	Login           string `json:"login"`
 	Email           string `json:"email"`
 	Password        string `json:"password"`
@@ -72,6 +71,7 @@ func (u User) HashPassword() (string, error) {
 func (u User) CheckPassword(password string) error {
 	return bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
 }
+
 func GenerateUUID() string {
 	u := make([]byte, 16)
 	rand.Read(u)

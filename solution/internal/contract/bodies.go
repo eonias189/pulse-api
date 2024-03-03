@@ -22,3 +22,8 @@ func (mp MeProfileBody) ToUser() User {
 		Image:       mp.Image,
 	}
 }
+
+type MeUpdatePasswordBody struct {
+	OldPassword string `json:"oldPassword"`
+	NewPassword string `json:"newPassword"`
+}

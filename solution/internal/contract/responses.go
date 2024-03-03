@@ -17,3 +17,7 @@ type RegisterResp struct {
 type SignInResp struct {
 	Token string `json:"token"`
 }
+
+type StatusResponse struct {
+	Status string `json:"status"`
+}

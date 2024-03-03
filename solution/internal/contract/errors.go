@@ -9,6 +9,8 @@ var (
 	USER_ALREADY_EXISTS = fmt.Errorf("user with some of this data already exists")
 	BAD_CRENDIALS       = fmt.Errorf("bad crendials")
 	PASSWORD_CHANGED    = fmt.Errorf("password changed")
+	ACCESS_DENIED       = fmt.Errorf("access denied")
+	INCORRECT_PASSWORD  = fmt.Errorf("password is incorrect")
 )
 
 func ENV_ERROR(param string) error {

@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"solution/internal/contract"
+	"solution/internal/utils"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -54,12 +56,9 @@ func (s *Service) GetCountries() ([]contract.Country, error) {
 	return QueryAll(CountryDriver{}, s.pool, `SELECT * FROM countries`)
 }
 
-func (s *Service) GetCountriesOfRegion(region string) ([]contract.Country, error) {
-	return QueryAll(CountryDriver{}, s.pool, fmt.Sprintf(`SELECT * FROM countries WHERE region='%v'`, region))
-}
-
-func (s *Service) GetRegions() ([]string, error) {
-	return QueryAll(StringScanner{}, s.pool, `SELECT DISTINCT (region) FROM countries`)
+func (s *Service) GetCountriesOfRegions(regions []string) ([]contract.Country, error) {
+	regionsRaw := strings.Join(utils.Map(regions, func(r string) string { return `'` + r + `'` }), ", ")
+	return QueryAll(CountryDriver{}, s.pool, fmt.Sprintf(`SELECT * FROM countries WHERE region in (%v)`, regionsRaw))
 }
 
 func (s *Service) GetCountryByAlpha2(alpha2 string) (contract.Country, error) {
@@ -78,8 +77,8 @@ func (s *Service) UserExists(user contract.User) bool {
 	return len(users) > 0
 }
 
-func (s *Service) PhoneExists(user contract.User) bool {
-	query := fmt.Sprintf(`SELECT * FROM users WHERE phone='%v' AND login !='%v'`, user.Phone, user.Login)
+func (s *Service) UserDataExists(user contract.User) bool {
+	query := fmt.Sprintf(`SELECT * FROM users WHERE (phone='%v' OR email='%v') AND login !='%v'`, user.Phone, user.Email, user.Login)
 	users, _ := QueryAll(UserDriver{}, s.pool, query)
 	return len(users) > 1
 }

@@ -74,7 +74,7 @@ type UserDriver struct{}
 
 func (u UserDriver) Scan(row pgx.Row) (contract.User, error) {
 	user := contract.User{}
-	err := row.Scan(&user.Id, &user.Login, &user.Email,
+	err := row.Scan(&user.Login, &user.Email,
 		&user.Password, &user.CountryCode, &user.IsPublic,
 		&user.Phone, &user.Image, &user.PasswordChanged)
 	return user, err
@@ -82,8 +82,7 @@ func (u UserDriver) Scan(row pgx.Row) (contract.User, error) {
 
 func (u UserDriver) InitTable() string {
 	return `CREATE TABLE IF NOT EXISTS users (
-		id TEXT NOT NULL PRIMARY KEY,
-		login TEXT NOT NULL UNIQUE,
+		login TEXT NOT NULL UNIQUE PRIMARY KEY,
 		email TEXT NOT NULL UNIQUE,
 		password TEXT NOT NULL,
 		countryCode CHAR(2) NOT NULL,
@@ -95,14 +94,14 @@ func (u UserDriver) InitTable() string {
 }
 
 func (u UserDriver) Add(user contract.User) string {
-	q := fmt.Sprintf(`INSERT INTO users VALUES ('%v', '%v', '%v', '%v', '%v', %v, '%v', '%v', %v)`,
-		user.Id, user.Login, user.Email, user.Password, user.CountryCode,
+	q := fmt.Sprintf(`INSERT INTO users VALUES ('%v', '%v', '%v', '%v', %v, '%v', '%v', %v)`,
+		user.Login, user.Email, user.Password, user.CountryCode,
 		user.IsPublic, user.Phone, user.Image, user.PasswordChanged,
 	)
 	return q
 }
 
 func (u UserDriver) Update(old, newUser contract.User) string {
-	return fmt.Sprintf(`UPDATE users SET countryCode='%v', isPublic=%v, phone='%v', image='%v' WHERE login='%v'`,
-		newUser.CountryCode, newUser.IsPublic, newUser.Phone, newUser.Image, old.Login)
+	return fmt.Sprintf(`UPDATE users SET password='%v', countryCode='%v', isPublic=%v, phone='%v', image='%v', passwordChanged=%v WHERE login='%v'`,
+		newUser.Password, newUser.CountryCode, newUser.IsPublic, newUser.Phone, newUser.Image, newUser.PasswordChanged, old.Login)
 }
