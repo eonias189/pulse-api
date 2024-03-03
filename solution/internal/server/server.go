@@ -40,6 +40,7 @@ func (s *Server) Run(address string) error {
 	handleAuth(api.Group("/auth"), s.service)
 	handleMe(api.Group("/me"), s.service)
 	handleProfiles(api.Group("/profiles"), s.service)
+	handleFriends(api.Group("/friends"), s.service)
 
 	s.logger.Info("server has been started", "address", address)
 

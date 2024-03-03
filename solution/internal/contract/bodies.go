@@ -27,3 +27,7 @@ type MeUpdatePasswordBody struct {
 	OldPassword string `json:"oldPassword"`
 	NewPassword string `json:"newPassword"`
 }
+
+type LoginBody struct {
+	Login string `json:"login"`
+}

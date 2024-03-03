@@ -28,7 +28,9 @@ func handleProfiles(r fiber.Router, s *service.Service) {
 			return utils.SendError(c, contract.NOT_FOUND("user", login), fiber.StatusForbidden)
 		}
 
-		if user.Login != payload.Login && !user.IsPublic {
+		_, err = s.FindRelation(user.Login, payload.Login)
+
+		if user.Login != payload.Login && !user.IsPublic && err != nil {
 			return utils.SendError(c, contract.ACCESS_DENIED, fiber.StatusForbidden)
 		}
 

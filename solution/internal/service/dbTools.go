@@ -44,3 +44,8 @@ func Update[T any, U Updater[T]](updater U, pool *pgxpool.Pool, old T, newItem T
 	_, err := pool.Exec(context.Background(), updater.Update(old, newItem))
 	return err
 }
+
+func Delete[T any, D Deleter[T]](deleter D, pool *pgxpool.Pool, item T) error {
+	_, err := pool.Exec(context.Background(), deleter.Delete(item))
+	return err
+}

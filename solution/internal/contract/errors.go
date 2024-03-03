@@ -40,3 +40,7 @@ func UNKNOWN_COUNTRY_CODE(code string) error {
 func NOT_FOUND(what, which string) error {
 	return fmt.Errorf("%v not found: %v", what, which)
 }
+
+func ALREADY_IN_FRIENDS(user string) error {
+	return fmt.Errorf("user %v is already in friends", user)
+}

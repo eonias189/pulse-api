@@ -27,6 +27,13 @@ type User struct {
 	PasswordChanged int64  `json:"-"`
 }
 
+type Relation struct {
+	Id            int
+	SenderLogin   string
+	AccepterLogin string
+	CreateTime    int64
+}
+
 type UserProfile struct {
 	Login       string `json:"login"`
 	Email       string `json:"email"`

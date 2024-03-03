@@ -6,6 +6,7 @@ import (
 	"solution/internal/contract"
 	"solution/internal/utils"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -49,6 +50,12 @@ func (s *Service) initTables() error {
 	if err != nil {
 		return err
 	}
+
+	err = InitTable(RelationDriver{}, s.pool)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -72,13 +79,14 @@ func (s *Service) GetUserByLogin(login string) (contract.User, error) {
 }
 
 func (s *Service) UserExists(user contract.User) bool {
-	query := fmt.Sprintf(`SELECT * FROM users WHERE login='%v' OR email='%v' OR phone='%v'`, user.Login, user.Email, user.Phone)
-	users, _ := QueryAll(UserDriver{}, s.pool, query)
+	query := fmt.Sprintf(`SELECT * FROM users WHERE login='%v' OR email='%v' OR (phone='%v' AND phone != NULL)`, user.Login, user.Email, user.Phone)
+	users, err := QueryAll(UserDriver{}, s.pool, query)
+	fmt.Println(users, err)
 	return len(users) > 0
 }
 
 func (s *Service) UserDataExists(user contract.User) bool {
-	query := fmt.Sprintf(`SELECT * FROM users WHERE (phone='%v' OR email='%v') AND login !='%v'`, user.Phone, user.Email, user.Login)
+	query := fmt.Sprintf(`SELECT * FROM users WHERE ((phone='%v' AND phone != NULL) OR email='%v') AND login !='%v'`, user.Phone, user.Email, user.Login)
 	users, _ := QueryAll(UserDriver{}, s.pool, query)
 	return len(users) > 1
 }
@@ -89,4 +97,37 @@ func (s *Service) AddUser(user contract.User) error {
 
 func (s *Service) UpdateUser(old, newUser contract.User) error {
 	return Update(UserDriver{}, s.pool, old, newUser)
+}
+
+func (s *Service) FindRelation(senderLogin, accepterLogin string) (contract.Relation, error) {
+	query := fmt.Sprintf(`SELECT * FROM relations WHERE senderLogin='%v' AND accepterLogin='%v'`, senderLogin, accepterLogin)
+	return QuerySingle(RelationDriver{}, s.pool, query)
+}
+
+func (s *Service) AddToFriends(senderLogin, accepterLogin string) error {
+	return Insert(RelationDriver{}, s.pool, contract.Relation{
+		SenderLogin:   senderLogin,
+		AccepterLogin: accepterLogin,
+		CreateTime:    time.Now().Unix(),
+	})
+}
+
+func (s *Service) DeleteRelation(relation contract.Relation) error {
+	return Delete(RelationDriver{}, s.pool, relation)
+}
+
+func (s *Service) GetFriends(login string, limit, offset int) ([]contract.User, error) {
+	res := []contract.User{}
+	query := fmt.Sprintf(`SELECT * FROM relations JOIN users on users.login=relations.accepterLogin WHERE senderLogin='%v' ORDER BY -createTime LIMIT %v OFFSET %v`, login, limit, offset)
+	rows, err := QueryAll(AccepterRelationDriver{}, s.pool, query)
+	if err != nil {
+		return res, err
+	}
+	return utils.Map(rows, func(r AccepterRelation) contract.User {
+		return r.User
+	}), nil
+}
+
+func (s *Service) GetUsers() ([]contract.User, error) {
+	return QueryAll(UserDriver{}, s.pool, `SELECT * FROM users`)
 }

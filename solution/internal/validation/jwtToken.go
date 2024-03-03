@@ -15,7 +15,7 @@ func ValidateJWTPayload(payload contract.JWTPayload, s *service.Service, timeout
 
 	user, err := s.GetUserByLogin(payload.Login)
 	if err != nil {
-		return contract.NOT_FOUND("user", payload.Login)
+		return contract.NOT_FOUND("user", user.Login)
 	}
 
 	if user.PasswordChanged > payload.CreateTime {

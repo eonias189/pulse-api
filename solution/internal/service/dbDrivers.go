@@ -22,7 +22,9 @@ type Adder[T any] interface {
 type Updater[T any] interface {
 	Update(T, T) string
 }
-
+type Deleter[T any] interface {
+	Delete(T) string
+}
 type CountryDriver struct {
 }
 
@@ -87,7 +89,7 @@ func (u UserDriver) InitTable() string {
 		password TEXT NOT NULL,
 		countryCode CHAR(2) NOT NULL,
 		isPublic BOOL NOT NULL,
-		phone TEXT UNIQUE,
+		phone TEXT,
 		image TEXT,
 		passwordChanged INTEGER
 	);`
@@ -104,4 +106,47 @@ func (u UserDriver) Add(user contract.User) string {
 func (u UserDriver) Update(old, newUser contract.User) string {
 	return fmt.Sprintf(`UPDATE users SET password='%v', countryCode='%v', isPublic=%v, phone='%v', image='%v', passwordChanged=%v WHERE login='%v'`,
 		newUser.Password, newUser.CountryCode, newUser.IsPublic, newUser.Phone, newUser.Image, newUser.PasswordChanged, old.Login)
+}
+
+type RelationDriver struct {
+}
+
+func (r RelationDriver) InitTable() string {
+	return `CREATE TABLE IF NOT EXISTS relations (
+		id SERIAL PRIMARY KEY,
+		senderLogin TEXT NOT NULL,
+		accepterLogin TEXT NOT NULL,
+		createTime INTEGER NOT NULL
+	)`
+}
+
+func (r RelationDriver) Scan(row pgx.Row) (contract.Relation, error) {
+	relation := contract.Relation{}
+	err := row.Scan(&relation.Id, &relation.SenderLogin, &relation.AccepterLogin, &relation.CreateTime)
+	return relation, err
+}
+
+func (r RelationDriver) Add(relation contract.Relation) string {
+	return fmt.Sprintf(`INSERT INTO relations (senderLogin, accepterLogin, createTime) VALUES ('%v', '%v', %v)`,
+		relation.SenderLogin, relation.AccepterLogin, relation.CreateTime)
+}
+
+func (r RelationDriver) Delete(relation contract.Relation) string {
+	return fmt.Sprintf(`DELETE FROM relations WHERE id=%v`, relation.Id)
+}
+
+type AccepterRelation struct {
+	contract.Relation
+	contract.User
+}
+
+type AccepterRelationDriver struct{}
+
+func (a AccepterRelationDriver) Scan(row pgx.Row) (AccepterRelation, error) {
+	ar := AccepterRelation{}
+	err := row.Scan(&ar.Id, &ar.SenderLogin, &ar.AccepterLogin, &ar.CreateTime,
+		&ar.Login, &ar.Email, &ar.Password, &ar.CountryCode, &ar.IsPublic,
+		&ar.Phone, &ar.Image, &ar.PasswordChanged,
+	)
+	return ar, err
 }
