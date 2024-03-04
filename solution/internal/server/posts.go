@@ -27,7 +27,7 @@ func handlePosts(r fiber.Router, s *service.Service) {
 			return utils.SendError(c, err, fiber.StatusBadRequest)
 		}
 
-		err = validation.ValidateNewPostBody(body)
+		err = validation.ValidateNewPostBody(string(c.BodyRaw()))
 		if err != nil {
 			return utils.SendError(c, err, fiber.StatusBadRequest)
 		}

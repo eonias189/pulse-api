@@ -84,16 +84,15 @@ func (s *Service) GetUserByLogin(login string) (contract.User, error) {
 }
 
 func (s *Service) UserExists(user contract.User) bool {
-	query := fmt.Sprintf(`SELECT * FROM users WHERE login='%v' OR email='%v' OR (phone='%v' AND phone != NULL)`, user.Login, user.Email, user.Phone)
-	users, err := QueryAll(UserDriver{}, s.pool, query)
-	fmt.Println(users, err)
+	query := fmt.Sprintf(`SELECT * FROM users WHERE login='%v' OR email='%v' OR (phone='%v' AND phone != '')`, user.Login, user.Email, user.Phone)
+	users, _ := QueryAll(UserDriver{}, s.pool, query)
 	return len(users) > 0
 }
 
 func (s *Service) UserDataExists(user contract.User) bool {
-	query := fmt.Sprintf(`SELECT * FROM users WHERE ((phone='%v' AND phone != NULL) OR email='%v') AND login !='%v'`, user.Phone, user.Email, user.Login)
+	query := fmt.Sprintf(`SELECT * FROM users WHERE ((phone='%v' AND phone != '') OR email='%v') AND login !='%v'`, user.Phone, user.Email, user.Login)
 	users, _ := QueryAll(UserDriver{}, s.pool, query)
-	return len(users) > 1
+	return len(users) > 0
 }
 
 func (s *Service) AddUser(user contract.User) error {

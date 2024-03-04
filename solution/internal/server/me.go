@@ -40,35 +40,34 @@ func handleMe(r fiber.Router, s *service.Service) {
 			body.IsPublic = payload.User.IsPublic
 		}
 
-		if body.Image == "" {
+		if !strings.Contains(string(c.Body()), `"image"`) {
 			body.Image = payload.User.Image
 		}
 
-		if body.Phone == "" {
+		if !strings.Contains(string(c.Body()), `"countryCode"`) {
+			body.CountryCode = payload.User.CountryCode
+		}
+
+		if !strings.Contains(string(c.Body()), `"phone"`) {
 			body.Phone = payload.User.Phone
 		}
 
-		if body.CountryCode == "" {
-			body.CountryCode = payload.User.CountryCode
-		} else {
-			_, err = s.GetCountryByAlpha2(body.CountryCode)
-			if err != nil {
-				return utils.SendError(c, contract.NOT_FOUND("country with alpha2", body.CountryCode), fiber.StatusBadRequest)
-			}
+		_, err = s.GetCountryByAlpha2(body.CountryCode)
+		if err != nil {
+			return utils.SendError(c, contract.NOT_FOUND("country with alpha2", body.CountryCode), fiber.StatusBadRequest)
 		}
+
+		newUser := body.ToUser(payload.User)
 
 		err = validation.ValidateImage(body.Image)
 		if err != nil {
 			return utils.SendError(c, err, fiber.StatusBadRequest)
 		}
 
-		if s.UserDataExists(body.ToUser()) {
+		if s.UserDataExists(newUser) {
 			return utils.SendError(c, contract.USER_ALREADY_EXISTS, fiber.StatusConflict)
 		}
 
-		newUser := body.ToUser()
-		newUser.Password = payload.User.Password
-		newUser.PasswordChanged = payload.User.PasswordChanged
 		err = s.UpdateUser(payload.User, newUser)
 		if err != nil {
 			return utils.SendError(c, err, fiber.StatusInternalServerError)

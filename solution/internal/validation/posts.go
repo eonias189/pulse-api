@@ -1,13 +1,16 @@
 package validation
 
-import "solution/internal/contract"
+import (
+	"solution/internal/contract"
+	"strings"
+)
 
-func ValidateNewPostBody(body contract.PostNewBody) error {
-	if body.Content == "" {
+func ValidateNewPostBody(bodyRaw string) error {
+	if !strings.Contains(string(bodyRaw), `"content"`) {
 		return contract.MISSING_FIELD("content")
 	}
 
-	if len(body.Tags) == 0 {
+	if !strings.Contains(string(bodyRaw), `"tags"`) {
 		return contract.MISSING_FIELD("tags")
 	}
 

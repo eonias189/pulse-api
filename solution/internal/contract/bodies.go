@@ -14,12 +14,16 @@ type MeProfileBody struct {
 	Image       string `json:"image"`
 }
 
-func (mp MeProfileBody) ToUser() User {
+func (mp MeProfileBody) ToUser(last User) User {
 	return User{
-		CountryCode: mp.CountryCode,
-		IsPublic:    mp.IsPublic,
-		Phone:       mp.Phone,
-		Image:       mp.Image,
+		Login:           last.Login,
+		Email:           last.Email,
+		Password:        last.Password,
+		CountryCode:     mp.CountryCode,
+		IsPublic:        mp.IsPublic,
+		Phone:           mp.Phone,
+		Image:           mp.Image,
+		PasswordChanged: last.PasswordChanged,
 	}
 }
 
