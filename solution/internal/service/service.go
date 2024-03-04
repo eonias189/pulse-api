@@ -116,16 +116,13 @@ func (s *Service) DeleteRelation(relation contract.Relation) error {
 	return Delete(RelationDriver{}, s.pool, relation)
 }
 
-func (s *Service) GetFriends(login string, limit, offset int) ([]contract.User, error) {
-	res := []contract.User{}
+func (s *Service) GetFriends(login string, limit, offset int) ([]AccepterRelation, error) {
 	query := fmt.Sprintf(`SELECT * FROM relations JOIN users on users.login=relations.accepterLogin WHERE senderLogin='%v' ORDER BY -createTime LIMIT %v OFFSET %v`, login, limit, offset)
 	rows, err := QueryAll(AccepterRelationDriver{}, s.pool, query)
 	if err != nil {
-		return res, err
+		return []AccepterRelation{}, err
 	}
-	return utils.Map(rows, func(r AccepterRelation) contract.User {
-		return r.User
-	}), nil
+	return rows, nil
 }
 
 func (s *Service) GetUsers() ([]contract.User, error) {

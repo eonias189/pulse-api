@@ -32,17 +32,17 @@ func handleFriends(r fiber.Router, s *service.Service) {
 			return utils.SendError(c, err, fiber.StatusBadRequest)
 		}
 
-		user, err := s.GetUserByLogin(body.Login)
-		if err != nil {
-			return utils.SendError(c, contract.NOT_FOUND("user", body.Login), fiber.StatusNotFound)
+		_, accepterNotExists := s.GetUserByLogin(body.Login)
+		if accepterNotExists != nil {
+			return utils.SendError(c, contract.NOT_FOUND("user", body.Login), fiber.StatusBadRequest)
 		}
 
-		_, err = s.FindRelation(payload.Login, body.Login)
-		if err == nil {
-			return utils.SendError(c, contract.ALREADY_IN_FRIENDS(body.Login), fiber.StatusBadRequest)
+		_, relationNotExists := s.FindRelation(payload.Login, body.Login)
+		if relationNotExists == nil {
+			return c.JSON(contract.StatusResponse{Status: "ok"})
 		}
 
-		err = s.AddToFriends(payload.Login, user.Login)
+		err = s.AddToFriends(payload.Login, body.Login)
 		if err != nil {
 			return utils.SendError(c, err, fiber.StatusInternalServerError)
 		}
@@ -97,6 +97,8 @@ func handleFriends(r fiber.Router, s *service.Service) {
 			return utils.SendError(c, err, fiber.StatusInternalServerError)
 		}
 
-		return c.JSON(friends)
+		return c.JSON(utils.Map(friends, func(a service.AccepterRelation) contract.Friend {
+			return a.ToFriend()
+		}))
 	})
 }

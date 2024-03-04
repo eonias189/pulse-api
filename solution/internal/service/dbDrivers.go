@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"solution/internal/contract"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -149,4 +150,11 @@ func (a AccepterRelationDriver) Scan(row pgx.Row) (AccepterRelation, error) {
 		&ar.Phone, &ar.Image, &ar.PasswordChanged,
 	)
 	return ar, err
+}
+
+func (a AccepterRelation) ToFriend() contract.Friend {
+	return contract.Friend{
+		Login:   a.Login,
+		AddedAt: time.Unix(a.CreateTime, 0).Format(time.RFC3339),
+	}
 }

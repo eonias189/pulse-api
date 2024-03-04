@@ -44,6 +44,7 @@ type UserProfile struct {
 }
 
 type JWTPayload struct {
+	User       User   `json:"-"`
 	Login      string `json:"login"`
 	CreateTime int64  `json:"createTime"`
 }

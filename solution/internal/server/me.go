@@ -22,12 +22,7 @@ func handleMe(r fiber.Router, s *service.Service) {
 			return utils.SendError(c, jwt.ErrTokenMalformed, fiber.StatusUnauthorized)
 		}
 
-		user, err := s.GetUserByLogin(payload.Login)
-		if err != nil {
-			return utils.SendError(c, err, fiber.StatusInternalServerError)
-		}
-
-		return c.JSON(user.ToUserProfile())
+		return c.JSON(payload.User.ToUserProfile())
 	})
 
 	r.Patch("/profile", func(c *fiber.Ctx) error {
@@ -41,25 +36,20 @@ func handleMe(r fiber.Router, s *service.Service) {
 			return utils.SendError(c, err, fiber.StatusBadRequest)
 		}
 
-		user, err := s.GetUserByLogin(payload.Login)
-		if err != nil {
-			return utils.SendError(c, err, fiber.StatusInternalServerError)
-		}
-
 		if !strings.Contains(string(c.Body()), `"isPublic"`) {
-			body.IsPublic = user.IsPublic
+			body.IsPublic = payload.User.IsPublic
 		}
 
 		if body.Image == "" {
-			body.Image = user.Image
+			body.Image = payload.User.Image
 		}
 
 		if body.Phone == "" {
-			body.Phone = user.Phone
+			body.Phone = payload.User.Phone
 		}
 
 		if body.CountryCode == "" {
-			body.CountryCode = user.CountryCode
+			body.CountryCode = payload.User.CountryCode
 		} else {
 			_, err = s.GetCountryByAlpha2(body.CountryCode)
 			if err != nil {
@@ -76,12 +66,14 @@ func handleMe(r fiber.Router, s *service.Service) {
 			return utils.SendError(c, contract.USER_ALREADY_EXISTS, fiber.StatusConflict)
 		}
 
-		err = s.UpdateUser(user, body.ToUser())
+		newUser := body.ToUser()
+		newUser.Password = payload.User.Password
+		err = s.UpdateUser(payload.User, newUser)
 		if err != nil {
 			return utils.SendError(c, err, fiber.StatusInternalServerError)
 		}
 
-		newUser, err := s.GetUserByLogin(user.Login)
+		newUser, err = s.GetUserByLogin(payload.Login)
 		if err != nil {
 			return utils.SendError(c, err, fiber.StatusInternalServerError)
 		}
@@ -96,11 +88,6 @@ func handleMe(r fiber.Router, s *service.Service) {
 			return utils.SendError(c, err, fiber.StatusUnauthorized)
 		}
 
-		user, err := s.GetUserByLogin(payload.Login)
-		if err != nil {
-			return utils.SendError(c, contract.NOT_FOUND("user", payload.Login), fiber.StatusUnauthorized)
-		}
-
 		body := contract.MeUpdatePasswordBody{}
 		err = c.BodyParser(&body)
 		if err != nil {
@@ -112,7 +99,7 @@ func handleMe(r fiber.Router, s *service.Service) {
 			return utils.SendError(c, err, fiber.StatusBadRequest)
 		}
 
-		err = user.CheckPassword(body.OldPassword)
+		err = payload.User.CheckPassword(body.OldPassword)
 		if err != nil {
 			return utils.SendError(c, contract.INCORRECT_PASSWORD, fiber.StatusForbidden)
 		}
@@ -122,7 +109,7 @@ func handleMe(r fiber.Router, s *service.Service) {
 			return utils.SendError(c, err, fiber.StatusBadRequest)
 		}
 
-		newUser := user
+		newUser := payload.User
 		newUser.Password = body.NewPassword
 		newUser.PasswordChanged = time.Now().Unix()
 		newUser.Password, err = newUser.HashPassword()
@@ -130,7 +117,7 @@ func handleMe(r fiber.Router, s *service.Service) {
 			return utils.SendError(c, err, fiber.StatusInternalServerError)
 		}
 
-		err = s.UpdateUser(user, newUser)
+		err = s.UpdateUser(payload.User, newUser)
 		if err != nil {
 			return utils.SendError(c, err, fiber.StatusInternalServerError)
 		}

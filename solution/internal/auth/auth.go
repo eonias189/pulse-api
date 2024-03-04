@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"solution/internal/contract"
 	"solution/internal/service"
 	"solution/internal/utils"
@@ -14,7 +15,8 @@ import (
 
 var (
 	secretKey    = []byte("very very secret")
-	contextKey   = "user"
+	tokenKey     = "user"
+	payloadKey   = "payload"
 	tokenTimeout = time.Hour * 4
 )
 
@@ -26,30 +28,33 @@ func AuthRequired(s *service.Service) func(*fiber.Ctx) error {
 			Key:    secretKey,
 			JWTAlg: jwtware.HS256,
 		},
-		ContextKey: contextKey,
+		ContextKey: tokenKey,
 	}
 	cfg.ErrorHandler = func(c *fiber.Ctx, err error) error {
 		return utils.SendError(c, err, fiber.StatusUnauthorized)
 	}
 	cfg.SuccessHandler = func(c *fiber.Ctx) error {
-		payload, err := GetJWTPayload(c)
+		payload, err := getTokenData(c)
 		if err != nil {
 			return utils.SendError(c, err, fiber.StatusUnauthorized)
 		}
 
-		err = validation.ValidateJWTPayload(payload, s, tokenTimeout)
+		user, err := validation.ValidateJWTPayload(payload, s, tokenTimeout)
 		if err != nil {
 			return utils.SendError(c, err, fiber.StatusUnauthorized)
 		}
+
+		payload.User = user
+		c.SetUserContext(context.WithValue(c.Context(), payloadKey, payload))
 
 		return c.Next()
 	}
 	return jwtware.New(cfg)
 }
 
-func GetJWTPayload(c *fiber.Ctx) (contract.JWTPayload, error) {
+func getTokenData(c *fiber.Ctx) (contract.JWTPayload, error) {
 	payload := contract.JWTPayload{}
-	jwtToken, ok := c.Context().Value(contextKey).(*jwt.Token)
+	jwtToken, ok := c.Context().Value(tokenKey).(*jwt.Token)
 	if !ok {
 		return payload, jwt.ErrTokenMalformed
 	}
@@ -73,9 +78,18 @@ func GetJWTPayload(c *fiber.Ctx) (contract.JWTPayload, error) {
 	return payload, nil
 }
 
+func GetJWTPayload(c *fiber.Ctx) (contract.JWTPayload, error) {
+	payload, ok := c.UserContext().Value(payloadKey).(contract.JWTPayload)
+	if !ok {
+		return payload, jwt.ErrTokenMalformed
+	}
+	return payload, nil
+
+}
+
 func GenerateJWT(payload contract.JWTPayload) (string, error) {
 	claims := payload.ToClaims()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-	return token.SignedString([]byte(secretKey))
+	return token.SignedString(secretKey)
 }

@@ -21,3 +21,10 @@ type SignInResp struct {
 type StatusResponse struct {
 	Status string `json:"status"`
 }
+
+type Friend struct {
+	Login   string `json:"login"`
+	AddedAt string `json:"addedAt"`
+}
+
+type FriendsResponse []Friend
