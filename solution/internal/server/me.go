@@ -68,6 +68,7 @@ func handleMe(r fiber.Router, s *service.Service) {
 
 		newUser := body.ToUser()
 		newUser.Password = payload.User.Password
+		newUser.PasswordChanged = payload.User.PasswordChanged
 		err = s.UpdateUser(payload.User, newUser)
 		if err != nil {
 			return utils.SendError(c, err, fiber.StatusInternalServerError)
