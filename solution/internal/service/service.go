@@ -22,7 +22,13 @@ func New(pgUrl string) (*Service, error) {
 	if err != nil {
 		return s, err
 	}
-	err = s.initTables()
+	err = s.initTables(
+		CountryDriver{},
+		UserDriver{},
+		RelationDriver{},
+		PostDriver{},
+		ReactionDriver{},
+	)
 	return s, err
 }
 
@@ -40,25 +46,12 @@ func (s *Service) connect() error {
 
 }
 
-func (s *Service) initTables() error {
-	err := InitTable(CountryDriver{}, s.pool)
-	if err != nil {
-		return err
-	}
-
-	err = InitTable(UserDriver{}, s.pool)
-	if err != nil {
-		return err
-	}
-
-	err = InitTable(RelationDriver{}, s.pool)
-	if err != nil {
-		return err
-	}
-
-	err = InitTable(PostDriver{}, s.pool)
-	if err != nil {
-		return err
+func (s *Service) initTables(creators ...TableCreater) error {
+	for _, creator := range creators {
+		err := InitTable(creator, s.pool)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -142,13 +135,69 @@ func (s *Service) AddPost(p contract.Post) error {
 }
 
 func (s *Service) GetPostById(id string) (contract.Post, error) {
-	return QuerySingle(PostDriver{}, s.pool, fmt.Sprintf(`SELECT * FROM posts WHERE id='%v'`, id))
+	post, err := QuerySingle(PostDriver{}, s.pool, fmt.Sprintf(`SELECT * FROM posts WHERE id='%v'`, id))
+	if err != nil {
+		return contract.Post{}, err
+	}
+	likes, dislikes, err := s.GetReactionsCount(id)
+	if err != nil {
+		return contract.Post{}, err
+	}
+	post.LikesCount = likes
+	post.DislikesCount = dislikes
+	return post, nil
+}
+
+func (s *Service) GetReactionsCount(postId string) (int, int, error) {
+	query := fmt.Sprintf(`SELECT * FROM reactions WHERE postId='%v'`, postId)
+	reactions, err := QueryAll(ReactionDriver{}, s.pool, query)
+	if err != nil {
+		return 0, 0, err
+	}
+	return len(utils.Filter(reactions, func(r contract.Reaction) bool {
+			return r.Type == contract.Like
+		})), len(utils.Filter(reactions, func(r contract.Reaction) bool {
+			return r.Type == contract.Dislike
+		})), nil
 }
 
 func (s *Service) GetPostsOf(author string, limit, offset int) ([]contract.Post, error) {
-	return QueryAll(PostDriver{}, s.pool, fmt.Sprintf(
+	posts, err := QueryAll(PostDriver{}, s.pool, fmt.Sprintf(
 		`SELECT * FROM posts WHERE author='%v'
 		ORDER BY -createdAt
 		LIMIT %v OFFSET %v`,
 		author, limit, offset))
+	if err != nil {
+		return []contract.Post{}, err
+	}
+	posts = utils.Map(posts, func(p contract.Post) contract.Post {
+		likes, dislikes, e := s.GetReactionsCount(p.Id)
+		fmt.Println(p.Id, likes, dislikes, e)
+		if e != nil {
+			err = e
+		}
+		p.LikesCount = likes
+		p.DislikesCount = dislikes
+		return p
+	})
+	return posts, err
+}
+
+func (s *Service) FindReaction(login, postId string) (contract.Reaction, error) {
+	return QuerySingle(ReactionDriver{}, s.pool, fmt.Sprintf(`SELECT * FROM reactions WHERE login='%v' AND postId='%v'`,
+		login, postId))
+}
+
+func (s *Service) SetReaction(login, postId string, rType contract.ReactionType) error {
+	react, err := s.FindReaction(login, postId)
+	if err == nil {
+		newReact := react
+		newReact.Type = rType
+		return Update(ReactionDriver{}, s.pool, react, newReact)
+	}
+	return Insert(ReactionDriver{}, s.pool, contract.Reaction{
+		Login:  login,
+		PostId: postId,
+		Type:   rType,
+	})
 }

@@ -171,16 +171,14 @@ func (p PostDriver) InitTable() string {
 		content TEXT,
 		author TEXT,
 		tags TEXT [],
-		createdAt INTEGER,
-		likesCount INTEGER,
-		dislikesCount INTEGER
+		createdAt INTEGER
 	)
 	`
 }
 
 func (p PostDriver) Scan(row pgx.Row) (contract.Post, error) {
 	post := contract.Post{}
-	err := row.Scan(&post.Id, &post.Content, &post.Author, &post.Tags, &post.CreatedAt, &post.LikesCount, &post.DislikesCount)
+	err := row.Scan(&post.Id, &post.Content, &post.Author, &post.Tags, &post.CreatedAt)
 	return post, err
 }
 
@@ -188,7 +186,31 @@ func (pd PostDriver) Add(p contract.Post) string {
 	tagsBytes, _ := json.Marshal(p.Tags)
 	tagsString := string(tagsBytes)
 	tagsString = strings.ReplaceAll(tagsString, `"`, `'`)
-	return fmt.Sprintf(`INSERT INTO posts (id, content, author, tags, createdAt, likesCount, dislikesCount) VALUES (
-		'%v', '%v', '%v', ARRAY %v, %v, %v, %v
-	)`, p.Id, p.Content, p.Author, tagsString, p.CreatedAt, p.LikesCount, p.DislikesCount)
+	return fmt.Sprintf(`INSERT INTO posts (id, content, author, tags, createdAt) VALUES (
+		'%v', '%v', '%v', ARRAY %v, %v
+	)`, p.Id, p.Content, p.Author, tagsString, p.CreatedAt)
+}
+
+type ReactionDriver struct{}
+
+func (r ReactionDriver) InitTable() string {
+	return `CREATE TABLE IF NOT EXISTS reactions (
+		login TEXT NOT NULL,
+		postId TEXT NOT NULL,
+		type TEXT NOT NULL
+	)`
+}
+
+func (rd ReactionDriver) Scan(row pgx.Row) (contract.Reaction, error) {
+	r := contract.Reaction{}
+	err := row.Scan(&r.Login, &r.PostId, &r.Type)
+	return r, err
+}
+
+func (rd ReactionDriver) Add(r contract.Reaction) string {
+	return fmt.Sprintf(`INSERT INTO reactions VALUES ('%v', '%v', '%v')`, r.Login, r.PostId, r.Type)
+}
+
+func (rd ReactionDriver) Update(old, newR contract.Reaction) string {
+	return fmt.Sprintf(`UPDATE reactions SET type='%v' WHERE login='%v' AND postId='%v'`, newR.Type, old.Login, old.PostId)
 }

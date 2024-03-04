@@ -118,10 +118,83 @@ func handlePosts(r fiber.Router, s *service.Service) {
 		if err != nil {
 			return utils.SendError(c, err, fiber.StatusInternalServerError)
 		}
-
 		return c.JSON(utils.Map(posts, func(p contract.Post) contract.PostPreview {
 			return p.ToPostPreview()
 		}))
 
+	})
+
+	r.Post("/:id/like", func(c *fiber.Ctx) error {
+
+		postId := c.Params("id")
+
+		payload, err := auth.GetJWTPayload(c)
+		if err != nil {
+			return utils.SendError(c, err, fiber.StatusUnauthorized)
+		}
+
+		post, err := s.GetPostById(postId)
+		if err != nil {
+			return utils.SendError(c, contract.NOT_FOUND("post with id", postId), fiber.StatusForbidden)
+		}
+
+		author, err := s.GetUserByLogin(post.Author)
+		if err != nil {
+			return utils.SendError(c, contract.NOT_FOUND("author of post", post.Author), fiber.StatusNotFound)
+		}
+
+		_, err = s.FindRelation(author.Login, payload.Login)
+		if author.Login != payload.Login && !author.IsPublic && err != nil {
+			return utils.SendError(c, contract.ACCESS_DENIED, fiber.StatusNotFound)
+		}
+
+		err = s.SetReaction(payload.Login, postId, contract.Like)
+		if err != nil {
+			return utils.SendError(c, err, fiber.StatusInternalServerError)
+		}
+
+		post, err = s.GetPostById(postId)
+		if err != nil {
+			return utils.SendError(c, err, fiber.StatusInternalServerError)
+		}
+
+		return c.JSON(post.ToPostPreview())
+	})
+
+	r.Post("/:id/dislike", func(c *fiber.Ctx) error {
+
+		postId := c.Params("id")
+
+		payload, err := auth.GetJWTPayload(c)
+		if err != nil {
+			return utils.SendError(c, err, fiber.StatusUnauthorized)
+		}
+
+		post, err := s.GetPostById(postId)
+		if err != nil {
+			return utils.SendError(c, contract.NOT_FOUND("post with id", postId), fiber.StatusForbidden)
+		}
+
+		author, err := s.GetUserByLogin(post.Author)
+		if err != nil {
+			return utils.SendError(c, contract.NOT_FOUND("author of post", post.Author), fiber.StatusNotFound)
+		}
+
+		_, err = s.FindRelation(author.Login, payload.Login)
+		if author.Login != payload.Login && !author.IsPublic && err != nil {
+			return utils.SendError(c, contract.ACCESS_DENIED, fiber.StatusNotFound)
+		}
+
+		err = s.SetReaction(payload.Login, postId, contract.Dislike)
+		if err != nil {
+			return utils.SendError(c, err, fiber.StatusInternalServerError)
+		}
+
+		post, err = s.GetPostById(postId)
+		if err != nil {
+			return utils.SendError(c, err, fiber.StatusInternalServerError)
+		}
+
+		return c.JSON(post.ToPostPreview())
 	})
 }

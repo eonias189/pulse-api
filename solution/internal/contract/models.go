@@ -9,6 +9,11 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+var (
+	Like    ReactionType = "like"
+	Dislike ReactionType = "dislike"
+)
+
 type Country struct {
 	Id     int    `json:"-"`
 	Name   string `json:"name"`
@@ -43,6 +48,14 @@ type Post struct {
 	CreatedAt     int64
 	LikesCount    int
 	DislikesCount int
+}
+
+type ReactionType string
+
+type Reaction struct {
+	Login  string
+	PostId string
+	Type   ReactionType
 }
 
 type UserProfile struct {

@@ -34,7 +34,7 @@ func handleFriends(r fiber.Router, s *service.Service) {
 
 		_, accepterNotExists := s.GetUserByLogin(body.Login)
 		if accepterNotExists != nil {
-			return utils.SendError(c, contract.NOT_FOUND("user", body.Login), fiber.StatusBadRequest)
+			return utils.SendError(c, contract.NOT_FOUND("user", body.Login), fiber.StatusNotFound)
 		}
 
 		_, relationNotExists := s.FindRelation(payload.Login, body.Login)
@@ -67,9 +67,14 @@ func handleFriends(r fiber.Router, s *service.Service) {
 			return utils.SendError(c, err, fiber.StatusBadRequest)
 		}
 
+		_, accepterNotExists := s.GetUserByLogin(body.Login)
+		if accepterNotExists != nil {
+			return utils.SendError(c, contract.NOT_FOUND("user", body.Login), fiber.StatusNotFound)
+		}
+
 		relation, err := s.FindRelation(payload.Login, body.Login)
 		if err != nil {
-			return utils.SendError(c, contract.NOT_FOUND("friend", body.Login), fiber.StatusBadRequest)
+			return c.JSON(contract.StatusResponse{Status: "ok"})
 		}
 
 		err = s.DeleteRelation(relation)
