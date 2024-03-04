@@ -1,10 +1,11 @@
 package contract
 
 import (
-	"crypto/rand"
-	"encoding/hex"
+	"fmt"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -34,6 +35,16 @@ type Relation struct {
 	CreateTime    int64
 }
 
+type Post struct {
+	Id            string
+	Content       string
+	Author        string
+	Tags          []string
+	CreatedAt     int64
+	LikesCount    int
+	DislikesCount int
+}
+
 type UserProfile struct {
 	Login       string `json:"login"`
 	Email       string `json:"email"`
@@ -41,6 +52,16 @@ type UserProfile struct {
 	IsPublic    bool   `json:"isPublic"`
 	Phone       string `json:"phone,omitempty"`
 	Image       string `json:"image,omitempty"`
+}
+
+type PostPreview struct {
+	Id            string   `json:"id"`
+	Content       string   `json:"content"`
+	Author        string   `json:"author"`
+	Tags          []string `json:"tags"`
+	CreatedAt     string   `json:"createdAt"`
+	LikesCount    int      `json:"likesCount"`
+	DislikesCount int      `json:"dislikesCount"`
 }
 
 type JWTPayload struct {
@@ -57,6 +78,18 @@ func (u User) ToUserProfile() UserProfile {
 		IsPublic:    u.IsPublic,
 		Phone:       u.Phone,
 		Image:       u.Image,
+	}
+}
+
+func (p Post) ToPostPreview() PostPreview {
+	return PostPreview{
+		Id:            p.Id,
+		Content:       p.Content,
+		Author:        p.Author,
+		Tags:          p.Tags,
+		CreatedAt:     time.Unix(p.CreatedAt, 0).Format(time.RFC3339),
+		LikesCount:    p.LikesCount,
+		DislikesCount: p.DislikesCount,
 	}
 }
 
@@ -81,11 +114,6 @@ func (u User) CheckPassword(password string) error {
 }
 
 func GenerateUUID() string {
-	u := make([]byte, 16)
-	rand.Read(u)
-
-	u[8] = (u[8] | 0x80) & 0xBF // what does this do?
-	u[6] = (u[6] | 0x40) & 0x4F // what does this do?
-
-	return hex.EncodeToString(u)
+	id := uuid.New()
+	return fmt.Sprint(id)
 }

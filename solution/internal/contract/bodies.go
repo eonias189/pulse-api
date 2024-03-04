@@ -31,3 +31,8 @@ type MeUpdatePasswordBody struct {
 type LoginBody struct {
 	Login string `json:"login"`
 }
+
+type PostNewBody struct {
+	Content string   `json:"content"`
+	Tags    []string `json:"tags"`
+}

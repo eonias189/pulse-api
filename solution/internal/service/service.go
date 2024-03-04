@@ -56,6 +56,11 @@ func (s *Service) initTables() error {
 		return err
 	}
 
+	err = InitTable(PostDriver{}, s.pool)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -127,4 +132,24 @@ func (s *Service) GetFriends(login string, limit, offset int) ([]AccepterRelatio
 
 func (s *Service) GetUsers() ([]contract.User, error) {
 	return QueryAll(UserDriver{}, s.pool, `SELECT * FROM users`)
+}
+
+func (s *Service) GetPosts() ([]contract.Post, error) {
+	return QueryAll(PostDriver{}, s.pool, `SELECT * FROM posts`)
+}
+
+func (s *Service) AddPost(p contract.Post) error {
+	return Insert(PostDriver{}, s.pool, p)
+}
+
+func (s *Service) GetPostById(id string) (contract.Post, error) {
+	return QuerySingle(PostDriver{}, s.pool, fmt.Sprintf(`SELECT * FROM posts WHERE id='%v'`, id))
+}
+
+func (s *Service) GetPostsOf(author string, limit, offset int) ([]contract.Post, error) {
+	return QueryAll(PostDriver{}, s.pool, fmt.Sprintf(
+		`SELECT * FROM posts WHERE author='%v'
+		ORDER BY -createdAt
+		LIMIT %v OFFSET %v`,
+		author, limit, offset))
 }

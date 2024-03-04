@@ -41,6 +41,7 @@ func (s *Server) Run(address string) error {
 	handleMe(api.Group("/me"), s.service)
 	handleProfiles(api.Group("/profiles"), s.service)
 	handleFriends(api.Group("/friends"), s.service)
+	handlePosts(api.Group("/posts"), s.service)
 
 	s.logger.Info("server has been started", "address", address)
 

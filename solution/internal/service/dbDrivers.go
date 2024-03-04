@@ -1,8 +1,10 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"solution/internal/contract"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -157,4 +159,36 @@ func (a AccepterRelation) ToFriend() contract.Friend {
 		Login:   a.Login,
 		AddedAt: time.Unix(a.CreateTime, 0).Format(time.RFC3339),
 	}
+}
+
+type PostDriver struct {
+}
+
+func (p PostDriver) InitTable() string {
+	return `
+	CREATE TABLE IF NOT EXISTS posts (
+		id TEXT UNIQUE PRIMARY KEY,
+		content TEXT,
+		author TEXT,
+		tags TEXT [],
+		createdAt INTEGER,
+		likesCount INTEGER,
+		dislikesCount INTEGER
+	)
+	`
+}
+
+func (p PostDriver) Scan(row pgx.Row) (contract.Post, error) {
+	post := contract.Post{}
+	err := row.Scan(&post.Id, &post.Content, &post.Author, &post.Tags, &post.CreatedAt, &post.LikesCount, &post.DislikesCount)
+	return post, err
+}
+
+func (pd PostDriver) Add(p contract.Post) string {
+	tagsBytes, _ := json.Marshal(p.Tags)
+	tagsString := string(tagsBytes)
+	tagsString = strings.ReplaceAll(tagsString, `"`, `'`)
+	return fmt.Sprintf(`INSERT INTO posts (id, content, author, tags, createdAt, likesCount, dislikesCount) VALUES (
+		'%v', '%v', '%v', ARRAY %v, %v, %v, %v
+	)`, p.Id, p.Content, p.Author, tagsString, p.CreatedAt, p.LikesCount, p.DislikesCount)
 }
